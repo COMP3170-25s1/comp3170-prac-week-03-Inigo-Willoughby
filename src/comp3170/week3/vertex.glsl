@@ -10,6 +10,6 @@ void main() {
 
 	// pad the vertex to a homogeneous 3D point
     gl_Position = a_position;
-
+    
 }
 
