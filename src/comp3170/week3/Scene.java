@@ -12,10 +12,12 @@ import static org.lwjgl.opengl.GL15.glBindBuffer;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.joml.Vector2f;
 
 import comp3170.GLBuffers;
 import comp3170.Shader;
 import comp3170.ShaderLibrary;
+import static comp3170.Math.TAU;
 
 public class Scene {
 
@@ -30,6 +32,16 @@ public class Scene {
 	private int colourBuffer;
 
 	private Shader shader;
+	
+	private Matrix4f modelMatrix = new Matrix4f();
+	private Matrix4f transMatrix = new Matrix4f();
+	private Matrix4f rotMatrix = new Matrix4f();
+	private Matrix4f scalMatrix = new Matrix4f();
+	
+	final private Vector3f OFFSET = new Vector3f(0.25f,0.0f, 0.0f);
+	final private float MOVEMENT_SPEED = 1.0f;
+	final private float SCALE_RATE = 0.1f;
+	final private float ROTATION_RATE = TAU/12;
 
 	public Scene() {
 
@@ -77,15 +89,16 @@ public class Scene {
 			// @formatter:on
 
 		indexBuffer = GLBuffers.createIndexBuffer(indices);
+		modelMatrix.translate(OFFSET).scale(SCALE_RATE); // T R S order
 
 	}
 
 	public void draw() {
-		
 		shader.enable();
 		// set the attributes
 		shader.setAttribute("a_position", vertexBuffer);
 		shader.setAttribute("a_colour", colourBuffer);
+		shader.setUniform("u_modelMatrix", modelMatrix);
 
 		// draw using index buffer
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -93,6 +106,13 @@ public class Scene {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDrawElements(GL_TRIANGLES, indices.length, GL_UNSIGNED_INT, 0);
 
+	}
+	
+	public void update(float deltaTime) {
+		
+		float movement = MOVEMENT_SPEED * deltaTime;
+		float rotation = ROTATION_RATE * deltaTime;
+		modelMatrix.translate(0.0f,movement,0.0f).rotateZ(rotation);
 	}
 
 	/**
@@ -105,21 +125,16 @@ public class Scene {
 	 * @return
 	 */
 
-	public static Matrix4f translationMatrix(float tx, float ty, Matrix4f dest) {
-		// clear the matrix to the identity matrix
-		dest.identity();
-
-		//     [ 1 0 0 tx ]
-		// T = [ 0 1 0 ty ]
-	    //     [ 0 0 0 0  ]
-		//     [ 0 0 0 1  ]
-
-		// Perform operations on only the x and y values of the T vec. 
-		// Leaves the z value alone, as we are only doing 2D transformations.
+	private Matrix4f translationMatrix(Vector2f vec, Matrix4f dest) {
 		
-		dest.m30(tx);
-		dest.m31(ty);
-
+		//          [ 1 0 0 x ]
+		// T(x,y) = [ 0 1 0 y ]
+		//          [ 0 0 0 0 ]
+		//          [ 0 0 0 1 ]
+		
+		dest.m30(vec.x);
+		dest.m31(vec.y);
+		
 		return dest;
 	}
 
@@ -153,7 +168,7 @@ public class Scene {
 	 */
 
 	public static Matrix4f scaleMatrix(float sx, float sy, Matrix4f dest) {
-
+		
 		dest.m00(sx);
 		dest.m11(sy);
 
